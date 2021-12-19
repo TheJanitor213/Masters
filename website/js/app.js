@@ -128,6 +128,14 @@ function formatDate(date) {
 
     return [year, month, day].join('-');
 }
+function hideShowImage(){
+	if ($('#stroke_type').is(':checked')) {
+		document.getElementById("letter").style.visibility = "hidden";
+	}
+	else{
+		document.getElementById("letter").style.visibility = "visible";
+	}
+}
 function switchImage() {
 	var selectedImage = $('#letters').val();
 	document.letter.src = 'img/' +selectedImage + ".png";
@@ -155,7 +163,14 @@ function createDownloadLink(blob) {
 
 		today = [year, month, day].join('-');
 		//name of .wav file to use during upload and download (without extension)
-		var filename = today + '-' + $('#letters').val() + '-' + $('#phone').val()
+		if ($('#stroke_type').is(':checked')) {
+			var stroke = "fixed"
+			
+		}
+		else{
+			var stroke = "free"
+		}
+		var filename = today + '-' + $('#letters').val() + '-' + $('#phone').val() + '-' + stroke
 
 		//add controls to the <audio> element
 		au.controls = true;
