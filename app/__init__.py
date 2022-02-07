@@ -8,4 +8,3 @@ from app.processing import processing
 
 app = Flask(__name__)
 app.register_blueprint(processing)
-app.config.from_object('config')
