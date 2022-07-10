@@ -128,6 +128,7 @@ function formatDate(date) {
 
     return [year, month, day].join('-');
 }
+<<<<<<< Updated upstream
 function hideShowImage(){
 	if ($('#stroke_type').is(':checked')) {
 		document.getElementById("letter").style.visibility = "hidden";
@@ -136,6 +137,8 @@ function hideShowImage(){
 		document.getElementById("letter").style.visibility = "visible";
 	}
 }
+=======
+>>>>>>> Stashed changes
 function switchImage() {
 	var selectedImage = $('#letters').val();
 	document.letter.src = 'img/' +selectedImage + ".png";

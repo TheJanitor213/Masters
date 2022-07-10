@@ -6,7 +6,6 @@ import os
 import audioread
 from pydub.silence import split_on_silence
 from pydub import AudioSegment
-from config import LOGGER as logger, APP as app
 
 FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
 logger = logging.getLogger('test')
@@ -68,10 +67,8 @@ def process_file(event, context):
             
             dBFS = song.dBFS
             chunks = split_on_silence (song, min_silence_len=1000,
-
                                         # anything under -16 dBFS is considered silence
                                         silence_thresh=dBFS-16, 
-
                                         # keep 200 ms of leading/trailing silence
                                         keep_silence=200)
             logger.debug(chunks)
@@ -79,9 +76,10 @@ def process_file(event, context):
                 silence_chunk = AudioSegment.silent(duration=200)
                 audio_chunk = silence_chunk + chunk + silence_chunk
                 normalized_chunk = match_target_amplitude(audio_chunk, -20.0)
-                logger.debug("Exporting chunk{0}.mp3.".format(i))
-                normalized_chunk.export("/tmp/chunk{0}.mp3".format(i),bitrate = "320k",format = "mp3")
-                s3_client.upload_file("/tmp/chunk{0}.mp3".format(i), 'datasets-masters-2020',"splits/{0}/chunk_{1}.mp3".format(key.split('.')[0], i))
+                logger.debug("Exporting chunk{0}.wav.".format(i))
+                normalized_chunk = normalized_chunk.set_frame_rate(44000)
+                normalized_chunk.export("/tmp/chunk{0}.wav".format(i), format = "wav")
+                s3_client.upload_file("/tmp/chunk{0}.wav".format(i), 'datasets-masters-2020',"splits/{0}/chunk_{1}.wav".format(key.split('.')[0], i))
             return
         else:
             logger.debug('Nothing to do here')

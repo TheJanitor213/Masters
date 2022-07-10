@@ -1,15 +1,22 @@
 [[source]]
-name = "pypi"
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
-
-[dev-packages]
+name = "pypi"
 
 [packages]
 zappa = "*"
 flask = "*"
+jupyter = "*"
+cython = "*"
+sklearn = "*"
+matplotlib = "*"
 audioread = "*"
 pydub = "*"
+scipy = "*"
+python-speech-features = "*"
+librosa = "*"
+
+[dev-packages]
 
 [requires]
 python_version = "3.6"
