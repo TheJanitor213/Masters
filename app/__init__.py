@@ -1,10 +1,8 @@
-''' App.py Initialisation of Yoco API '''
 
-from os import getenv
-from datetime import datetime, timedelta
-from flask import Flask, request, Blueprint
-from zappa.asynchronous import task
+from flask import Flask
+
 from app.processing import processing
-
+from app.prediction import prediction
 app = Flask(__name__)
 app.register_blueprint(processing)
+app.register_blueprint(prediction)

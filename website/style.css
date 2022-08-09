@@ -104,6 +104,10 @@ li {
 #recordingsList{
 	max-width: 28em;
 }
+
+#predictRecordingsList{
+	max-width: 28em;
+}
 .custom-select {
   position: relative;
   font-family: Arial;

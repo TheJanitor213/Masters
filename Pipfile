@@ -6,17 +6,18 @@ name = "pypi"
 [packages]
 zappa = "*"
 flask = "*"
-jupyter = "*"
 cython = "*"
-sklearn = "*"
-matplotlib = "*"
 audioread = "*"
 pydub = "*"
-scipy = "*"
 python-speech-features = "*"
+numpy = "*"
+scipy = "*"
+scikit-learn = "*"
+libsvm = "*"
 librosa = "*"
+numba = "==0.48.0"
 
 [dev-packages]
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"

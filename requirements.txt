@@ -1,0 +1,9 @@
+zappa
+flask
+cython
+audioread
+pydub
+python-speech-features
+numpy
+scipy
+scikit-learn
