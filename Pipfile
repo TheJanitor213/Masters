@@ -14,8 +14,10 @@ numpy = "*"
 scipy = "*"
 scikit-learn = "*"
 libsvm = "*"
-librosa = "*"
-numba = "==0.48.0"
+schemdraw = "*"
+ipython = "*"
+matplotlib = "*"
+seaborn = "*"
 
 [dev-packages]
 

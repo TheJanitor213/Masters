@@ -8,7 +8,6 @@ COPY ./ ${FUNCTION_DIR}
 RUN yum install gcc gcc72-c++ g++ libsndfile -y
 RUN yum groupinstall 'Development Tools' -y
 RUN pip install -r requirements.txt
-RUN cd libsvm-3.25/python && python setup.py install
 # Grab the zappa handler.py and put it in the working directory
 RUN ZAPPA_HANDLER_PATH=$( \
     python -c "from zappa import handler; print (handler.__file__)" \
