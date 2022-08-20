@@ -162,7 +162,7 @@ def create_cepstral_coefficients(file):
 
 
 def load_audio():
-    rootdir = "../backup/dataset/"
+    rootdir = "dataset/"
     labels = []
     letters = {}
     print("Loading audio...")

@@ -27,7 +27,7 @@ def after(response):
     return response
 
     
-def pad_audio(data, fs, T=4):
+def pad_audio(data, fs, T=3):
     # Calculate target number of samples
     N_tar = int(fs * T)
     # Calculate number of zero samples to append
