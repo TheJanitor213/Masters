@@ -51,7 +51,7 @@ def load_audio(audio_file):
     return pad_audio(data, samplerate)
 
 def extract_features(audio_data):
-    data = mfcc(audio_data, samplerate=22050, nfft=2048, winfunc=np.hamming)
+    data = mfcc(audio_data, samplerate=22050, nfft=1024, winfunc=np.hamming)
     return np.array(data)
 
 from .common import split_sound

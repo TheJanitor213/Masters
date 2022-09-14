@@ -89,7 +89,7 @@ def process_file(event, context):
                 audio_chunk = silence_chunk + chunk + silence_chunk
                 normalized_chunk = match_target_amplitude(audio_chunk, -20.0)
                 logger.debug("Exporting chunk{0}.wav.".format(i))
-                normalized_chunk = normalized_chunk.set_frame_rate(44000)
+                normalized_chunk = normalized_chunk.set_frame_rate(44100)
                 normalized_chunk.export("/tmp/chunk{0}.wav".format(i), format="wav")
                 s3_client.upload_file(
                     "/tmp/chunk{0}.wav".format(i),

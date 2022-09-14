@@ -22,56 +22,6 @@ import os
 import pickle
 import itertools
 
-def normalize_audio(audio):
-    audio = audio / np.max(np.abs(audio))
-    return audio
-
-
-def frame_audio(audio, FFT_size=2048, hop_size=10, sample_rate=44100):
-    # hop_size in ms
-
-    audio = np.pad(audio, int(FFT_size / 2), mode="reflect")
-    frame_len = np.round(sample_rate * hop_size / 1000).astype(int)
-    frame_num = int((len(audio) - FFT_size) / frame_len) + 1
-    frames = np.zeros((frame_num, FFT_size))
-
-    for n in range(frame_num):
-        frames[n] = audio[n * frame_len : n * frame_len + FFT_size]
-
-    return frames
-
-
-def freq_to_mel(freq):
-    return 2595.0 * np.log10(1.0 + freq / 700.0)
-
-
-def met_to_freq(mels):
-    return 700.0 * (10.0 ** (mels / 2595.0) - 1.0)
-
-
-def get_filter_points(fmin, fmax, mel_filter_num, FFT_size, sample_rate=44100):
-    fmin_mel = freq_to_mel(fmin)
-    fmax_mel = freq_to_mel(fmax)
-
-    mels = np.linspace(fmin_mel, fmax_mel, num=mel_filter_num + 2)
-    freqs = met_to_freq(mels)
-
-    return np.floor((FFT_size + 1) / sample_rate * freqs).astype(int), freqs
-
-
-def get_filters(filter_points, FFT_size):
-    filters = np.zeros((len(filter_points) - 2, int(FFT_size / 2 + 1)))
-    print("Getting filters")
-    for n in tqdm(range(len(filter_points) - 2)):
-        filters[n, filter_points[n] : filter_points[n + 1]] = np.linspace(
-            0, 1, filter_points[n + 1] - filter_points[n]
-        )
-        filters[n, filter_points[n + 1] : filter_points[n + 2]] = np.linspace(
-            1, 0, filter_points[n + 2] - filter_points[n + 1]
-        )
-
-    return filters
-
 
 def pad_audio(data, fs, T=3):
     # Calculate target number of samples
@@ -92,91 +42,21 @@ def pad_audio(data, fs, T=3):
         return data
 
 
-def dct(dct_filter_num, filter_len):
-    basis = np.empty((dct_filter_num, filter_len))
-    basis[0, :] = 1.0 / np.sqrt(filter_len)
-
-    samples = np.arange(1, 2 * filter_len, 2) * np.pi / (2.0 * filter_len)
-
-    for i in range(1, dct_filter_num):
-        basis[i, :] = np.cos(i * samples) * np.sqrt(2.0 / filter_len)
-
-    return basis
-
-
-def create_cepstral_coefficients(file):
-    sample_rate, audio = wavfile.read(file)
-    audio = pad_audio(audio, sample_rate)
-
-    hop_size = 10  # ms
-    FFT_size = 1024
-
-    audio_framed = frame_audio(
-        audio, FFT_size=FFT_size, hop_size=hop_size, sample_rate=sample_rate
-    )
-
-    window = get_window("hann", FFT_size, fftbins=True)
-
-    audio_win = audio_framed * window
-
-    ind = 6
-
-    audio_winT = np.transpose(audio_win)
-
-    audio_fft = np.empty(
-        (int(1 + FFT_size // 2), audio_winT.shape[1]), dtype=np.complex64, order="F"
-    )
-
-    for n in range(audio_fft.shape[1]):
-        audio_fft[:, n] = fft.fft(audio_winT[:, n], axis=0)[: audio_fft.shape[0]]
-
-    audio_fft = np.transpose(audio_fft)
-
-    audio_power = np.square(np.abs(audio_fft))
-
-    freq_min = 0
-    freq_high = sample_rate / 2
-    mel_filter_num = 10
-
-    filter_points, mel_freqs = get_filter_points(
-        freq_min, freq_high, mel_filter_num, FFT_size, sample_rate=44100
-    )
-
-    filters = get_filters(filter_points, FFT_size)
-
-    # taken from the librosa library
-    enorm = 2.0 / (mel_freqs[2 : mel_filter_num + 2] - mel_freqs[:mel_filter_num])
-    filters *= enorm[:, np.newaxis]
-
-    audio_filtered = np.dot(filters, np.transpose(audio_power))
-    audio_log = 10.0 * np.log10(audio_filtered)
-    audio_log.shape
-
-    dct_filter_num = 40
-
-    dct_filters = dct(dct_filter_num, mel_filter_num)
-
-    cepstral_coefficents = np.dot(dct_filters, audio_log)
-
-    return cepstral_coefficents
-
-
 def load_audio():
-    rootdir = "dataset/"
-    labels = []
+    rootdir = "data_by_subject/"
     letters = {}
     print("Loading audio...")
     file_count = sum(len(files) for _, _, files in os.walk(rootdir))
+    print(file_count)
     with tqdm(total=file_count) as pbar:
         for subdir, dirs, files in tqdm(os.walk(rootdir)):
-            for file in files:
-                pbar.update(1)
-                if "chunk" in file:
-
+            if '1' in subdir or '2' in subdir or '3' in subdir or '4' in subdir or '5' in subdir:
+                for file in files:
+                    pbar.update(1)
                     sample_rate, audio = wavfile.read(os.path.join(subdir, file))
-
+                    print(sample_rate, audio)
                     data = pad_audio(audio, sample_rate)
-                    label = os.path.join(subdir, file).split("-")[3]
+                    label = os.path.join(subdir, file).split("/")[2]
                     if letters.get(label):
                         letters[label].append(data)
                     else:
@@ -186,6 +66,8 @@ def load_audio():
 
 # How to use load_audio() function
 characters = load_audio()
+mapping = {v: k for k, v in enumerate(ascii_uppercase)}
+inv_map = {v: k for k, v in mapping.items()}
 
 
 def extract_features(audio_data):
@@ -194,19 +76,13 @@ def extract_features(audio_data):
     # so we need to only take the raw audio wave.
     output, label_output = [], []
     print("Extracting features")
+
     for k, v in tqdm(audio_data.items()):
         for i in v:
             label_output.append(k)
-            data = mfcc(i, samplerate=22050, nfft=2048, winfunc=np.hamming)
-            output.append(np.array(data).flatten())
+            data = mfcc(i, samplerate=44000, nfft=2048, winfunc=np.hamming)
+            output.append(data.ravel())
 
-        # n_fft = int(samplerate * 0.02)
-        # data = mfcc(audio_waves, samplerate=samplerate, nfft=2048, winfunc=np.hamming)
-        # label_output.append(letter)
-        # features = np.array(data)
-        # output.append(features.flatten())
-
-    mapping = {v: k for k, v in enumerate(ascii_uppercase)}
     label_output = [mapping[k] for k in label_output]
     label_output = np.array(label_output)
     return output, label_output
@@ -221,40 +97,39 @@ X = character_features
 Y = labels
 
 
+group_1 = ["C", "G", "I", "J", "L", "M", "N", "O", "S", "U", "V", "W", "Z"]
+group_2 = ["A", "B", "D", "K", "P", "Q", "R", "T", "X", "Y"]
+group_3 = ["E", "F", "H"]
+
+X_1, X_2, X_3 = [], [], []
+Y_1, Y_2, Y_3 = [], [], []
+
+for i, label in enumerate(Y):
+    if inv_map[label] in group_1:
+        X_1.append(X[i])
+        Y_1.append(label)
+    if inv_map[label] in group_2:
+        X_2.append(X[i])
+        Y_2.append(label)
+    if inv_map[label] in group_3:
+        X_3.append(X[i])
+        Y_3.append(label)
+
 X_train, X_test, y_train, y_test = train_test_split(
     X, Y, test_size=0.3, random_state=30, stratify=Y
 )
-
-
-
-parameters = {"C": [1, 10, 32, 100, 1000], "gamma": [0.00001, 0.000488281, 0.0001, 0.001, 0.01, 0.1]}
-grid = GridSearchCV(svm.SVC(kernel="poly"), parameters, cv=5)
-grid.fit(X_train, y_train)
-print(grid)
-print(grid.best_params_)
-print(grid.best_score_)
-
-# y_pred = clf.predict(X_test)
-# print(clf.score(X_test, y_test))
-# print(confusion_matrix(y_test, y_pred))
-# print(classification_report(y_test, y_pred))
-
-clf = svm.SVC(kernel="poly", **grid.best_params_, class_weight='balanced')
-
-#clf = svm.SVC(kernel="rbf", C=32.0, gamma=0.000488281)
-clf.fit(X_train, y_train)
-y_pred = clf.predict(X_test)
-print(clf.score(X_test, y_test))
-print(confusion_matrix(y_test, y_pred))
-print(classification_report(y_test, y_pred))
-# save the classifier
-
-with open("my_dumped_classifier.pkl", "wb") as fid:
-    pickle.dump(clf, fid)
+# X_train_1, X_test_1, y_train_1, y_test_1 = train_test_split(
+#     X_1, Y_1, test_size=0.3, random_state=30, stratify=Y_1
+# )
+# X_train_2, X_test_2, y_train_2, y_test_2 = train_test_split(
+#     X_2, Y_2, test_size=0.3, random_state=30, stratify=Y_2
+# )
+# X_train_3, X_test_3, y_train_3, y_test_3 = train_test_split(
+#     X_3, Y_3, test_size=0.3, random_state=30, stratify=Y_3
+# )
 
 
 def custom_dump_svmlight_file(X_train, Y_train, filename):
-
 
     # This function inserts the extracted features in the libsvm format
     featinds = [" " + str(i) + ":" for i in range(1, len(X_train[0]) + 1)]
@@ -278,3 +153,104 @@ def custom_dump_svmlight_file(X_train, Y_train, filename):
 
 custom_dump_svmlight_file(X_train, y_train, "training_data")
 custom_dump_svmlight_file(X_test, y_test, "test_data")
+# custom_dump_svmlight_file(X_train_1, y_train_1, "training_data_1")
+# custom_dump_svmlight_file(X_test_1, y_test_1, "test_data_1")
+# custom_dump_svmlight_file(X_train_2, y_train_2, "training_data_2")
+# custom_dump_svmlight_file(X_test_2, y_test_2, "test_data_2")
+# custom_dump_svmlight_file(X_train_3, y_train_3, "training_data_3")
+# custom_dump_svmlight_file(X_test_3, y_test_3, "test_data_3")
+
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import confusion_matrix
+
+
+def training(training_data, test_data, file_output_name, params):
+    X_train, Y_train = training_data
+    X_test, Y_test = test_data
+    clf = svm.SVC(kernel="rbf", C=params["C"], gamma=params["gamma"])
+    clf.fit(X_train, Y_train)
+    pred = clf.predict(X_test)
+    print(clf.score(X_test, Y_test))
+    # print(confusion_matrix(Y_test, pred))
+    # print(classification_report(Y_test, pred))
+    # save the classifier
+
+    with open(file_output_name, "wb") as fid:
+        pickle.dump(clf, fid)
+
+    return confusion_matrix(Y_test, pred)
+
+
+def grid(X, y):
+    C_range = np.logspace(-2, 10, 13, 32)
+    gamma_range = np.logspace(-9, 3, 13, 32)
+    param_grid = dict(gamma=gamma_range, C=C_range)
+    cv = StratifiedShuffleSplit(n_splits=7, test_size=0.3, random_state=42)
+    grid = GridSearchCV(svm.SVC(), param_grid=param_grid, cv=cv)
+    grid.fit(X, y)
+
+    print(
+        "The best parameters are %s with a score of %0.2f"
+        % (grid.best_params_, grid.best_score_)
+    )
+    return grid.best_params_
+
+all_params = grid(X_train, y_train)
+# params_1 = grid(X_train_1, y_train_1)
+# params_2 = grid(X_train_2, y_train_2)
+# params_3 = grid(X_train_3, y_train_3)
+
+all_matrix = training(
+    (X_train, y_train), (X_test, y_test), "classifier_all.pkl", all_params
+)
+# matrix_1 = training(
+#     (X_train_1, y_train_1), (X_test_1, y_test_1), "classifier_1.pkl", params_1
+# )
+# matrix_2 = training(
+#     (X_train_2, y_train_2), (X_test_2, y_test_2), "classifier_2.pkl", params_2
+# )
+# matrix_3 = training(
+#     (X_train_3, y_train_3), (X_test_3, y_test_3), "classifier_3.pkl", params_3
+# )
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+df_cm = pd.DataFrame(
+    all_matrix,
+    index=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+    columns=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+)
+plt.figure(figsize=(10, 7))
+all_map = sns.heatmap(df_cm, annot=True)
+
+
+# df_cm = pd.DataFrame(
+#     matrix_1, index=[i for i in "".join(group_1)], columns=[i for i in "".join(group_1)]
+# )
+# plt.figure(figsize=(10, 7))
+# map_1 = sns.heatmap(df_cm, annot=True)
+
+# df_cm = pd.DataFrame(
+#     matrix_2, index=[i for i in "".join(group_2)], columns=[i for i in "".join(group_2)]
+# )
+# plt.figure(figsize=(10, 7))
+# map_2 = sns.heatmap(df_cm, annot=True)
+
+# df_cm = pd.DataFrame(
+#     matrix_3, index=[i for i in "".join(group_3)], columns=[i for i in "".join(group_3)]
+# )
+# plt.figure(figsize=(10, 7))
+# map_3 = sns.heatmap(df_cm, annot=True)
+
+
+fig = all_map.get_figure()
+fig.savefig("all_map.png")
+# fig = map_1.get_figure()
+# fig.savefig("map_1.png")
+# fig = map_2.get_figure()
+# fig.savefig("map_2.png")
+# fig = map_3.get_figure()
+# fig.savefig("map_3.png")
