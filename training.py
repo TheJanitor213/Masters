@@ -99,7 +99,7 @@ def extract_features(audio_data):
         for i in v:
             label_output.append(k)
 
-            data = mfcc(i, samplerate=44000, nfft=2048, winfunc=np.hamming)
+            data = mfcc(i, samplerate=44100, nfft=2048, winfunc=np.hamming)
             output.append(data.ravel())
 
     label_output = [mapping[k] for k in label_output]
