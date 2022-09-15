@@ -18,6 +18,7 @@ schemdraw = "*"
 ipython = "*"
 matplotlib = "*"
 seaborn = "*"
+joblib = "*"
 
 [dev-packages]
 
