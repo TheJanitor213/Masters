@@ -279,33 +279,33 @@ def main():
     scaler = StandardScaler().fit(X_unseen)
     X_unseen = scaler.transform(X_unseen)
 
-    writetopcklfile("unseen-data", [X_unseen, y_unseen])
+    # writetopcklfile("unseen-data", [X_unseen, y_unseen])
 
-    c, gamma, accuracy = paramsfromexternalgridsearch(
-        "new_training_data",
-        crange,
-        grange,
-        printlines=True,
-    )
-    print(accuracy)
+    # c, gamma, accuracy = paramsfromexternalgridsearch(
+    #     "new_training_data",
+    #     crange,
+    #     grange,
+    #     printlines=True,
+    # )
+    # print(accuracy)
 
-    all_matrix = training(
-        (X_train, y_train),
-        (X_test, y_test),
-        "classifier_all.pkl",
-        {"C": c, "gamma": gamma},
-    )
+    # all_matrix = training(
+    #     (X_train, y_train),
+    #     (X_test, y_test),
+    #     "classifier_all.pkl",
+    #     {"C": c, "gamma": gamma},
+    # )
 
-    df_cm = pd.DataFrame(
-        all_matrix,
-        index=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
-        columns=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
-    )
-    plt.figure(figsize=(10, 7))
-    all_map = sns.heatmap(df_cm, annot=True)
+    # df_cm = pd.DataFrame(
+    #     all_matrix,
+    #     index=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+    #     columns=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+    # )
+    # plt.figure(figsize=(10, 7))
+    # all_map = sns.heatmap(df_cm, annot=True)
 
-    fig = all_map.get_figure()
-    fig.savefig("semi-seen.png")
+    # fig = all_map.get_figure()
+    # fig.savefig("semi-seen.png")
 
     model = pickle.load(open("classifier_all.pkl", "rb"))
     y_pred = model.predict(X_unseen)
@@ -347,287 +347,22 @@ def main():
     from spellchecker import SpellChecker
     spell = SpellChecker()
     for i in subject_1:
-        print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        prediction = model.predict(np.array(i))
+        print("".join([inv_map[j] for j in list(prediction)]))
+        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
     for i in subject_2:
-        print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        prediction = model.predict(np.array(i))
+        print("".join([inv_map[j] for j in list(prediction)]))
+        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
     for i in subject_3:
-        print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        prediction = model.predict(np.array(i))
+        print("".join([inv_map[j] for j in list(prediction)]))
+        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
 
 
-
-# # exit()
-# -------------------------------------------------------------------------------------------------------------------------------------------
-# 				1. If subject is seen and sentence known but taking some samples out
-# -------------------------------------------------------------------------------------------------------------------------------------------
-# # 3 accents x 5 subjects x 5 sentences x 10 samples
-# # First question: sub known, sent known
-# print("Computing Question 1: If subject is seen and sentence known but taking some samples out")
-# totalaccents = 26
-# subsperaccent = ["placeholder", 5, 5, 4, 5]
-# totalsents = 5
-# totalsamples = 10
-# trainsamples = 7
-
-# testsamples = totalsamples - trainsamples  # Don't change
-# # Accent,Subject,Sentence,Sample
-# X_train = []
-# X_test = []
-# Y_train = []
-# Y_test = []
-# othertestfeatures = []
-
-# start = time()
-
-# for acc in range(1, totalaccents + 1):
-# 	for sub in range(1, subsperaccent[acc] + 1):
-# 		for sent in range(1, totalsents + 1):
-# 			for samp in range(1, totalsamples + 1):
-
-# 				filename = ",".join([str(it) for it in [acc, sub, sent, samp]])
-
-# 				if samp <= trainsamples:
-
-# 					X_train.append(X[Xdir[filename]])  # Features of audio sample 1-5
-# 					Y_train.append(int(filename[0]))  # labels (1,2,3,4)
-
-# 				else:  # Otherwise we testing on the remaining
-
-# 					X_test.append(X[Xdir[filename]])  # Features of audio sample 6-10
-# 					Y_test.append(int(filename[0]))
-# 					othertestfeatures.append([sub, sent, samp])
-
-# writetopcklfile("Qn1train.pkl", [X_train, Y_train])
-# writetopcklfile("Qn1test.pkl", [X_test, Y_test, othertestfeatures])
-# # Creating a training file that will contain the training data
-# trainfile = "Question1.dat"
-# # Cross validation in order to get the best C and Gamma parameter
-# custom_dump_svmlight_file(X_train, Y_train, trainfile)
-
-# finish = time()
-# print("Time to compute Q1 %.3f s" % (finish - start))
-
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# #				2.If subject is seen but sentence is unseen
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# print("Computing Question 2: If subject is seen but Sentence is unseen")
-# totalaccents = 4
-# subsperaccent = ["placeholder", 5, 5, 4, 5]
-# totalsents = 5
-# train_sentence = 4
-# totalsamples = 10
-
-# testsentence = totalsents - train_sentence  # Don't change
-# # Accent,Subject,Sentence,Sample
-# X_train2 = []
-# X_test2 = []
-# Y_train2 = []
-# Y_test2 = []
-# othertestfeatures = []
-
-# for acc in range(1, totalaccents + 1):
-# 	for sub in range(1, subsperaccent[acc] + 1):
-# 		for sent in range(1, totalsents + 1):
-# 			for samp in range(1, totalsamples + 1):
-
-# 				filename = ",".join([str(it) for it in [acc, sub, sent, samp]])
-
-# 				if sent <= train_sentence:
-
-# 					X_train2.append(X[Xdir[filename]])  # Features of audio sample 1-5
-
-# 					Y_train2.append(filename[0])  # labels (1,2,3,4)
-
-# 				else:  # Otherwise we testing on the remaining
-
-# 					X_test2.append(X[Xdir[filename]])  # Features of audio sample 6-10
-
-# 					Y_test2.append(filename[0])
-# 					othertestfeatures.append([sub, sent, samp])
-
-# # feature scaling in order to standardize the features
-# scaler = StandardScaler().fit(X_train2)
-# X_train2 = scaler.transform(X_train2)
-# X_test2 = scaler.transform(X_test2)
-
-# writetopcklfile("Qn2train.pkl", [X_train2, Y_train2])
-# writetopcklfile("Qn2test.pkl", [X_test2, Y_test2, othertestfeatures])
-# # Creating a training file that will contain the training data
-# trainfile = "Question2.dat"
-
-# custom_dump_svmlight_file(X_train2, Y_train2, trainfile)
-
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# #				3.If subject is unseen but sentence is seen
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# print("Computing Question 3: If subject is unseen but sentence is seen")
-# totalaccents = 4
-# subsperaccent = ["placeholder", 5, 5, 4, 5]
-# totalsents = 5
-# train_subjects = ["placeholder", 3, 3, 2, 3]
-# totalsamples = 10
-
-# testsubject = np.array(subsperaccent[1:])-np.array(train_subjects[1:])#subsperaccent - train_subjects  # Don't change
-# # Accent,Subject,Sentence,Sample
-# X_train3 = []
-# X_test3 = []
-
-# Y_train3 = []
-# Y_test3 = []
-# othertestfeatures = []
-
-# for acc in range(1, totalaccents + 1):
-# 	for sub in range(1, subsperaccent[acc] + 1):
-# 		for sent in range(1, totalsents + 1):
-# 			for samp in range(1, totalsamples + 1):
-
-# 				filename = ",".join([str(it) for it in [acc, sub, sent, samp]])
-
-# 				if sub <= train_subjects[acc]:
-
-# 					X_train3.append(X[Xdir[filename]])  # Features of subjects  1-3
-
-# 					Y_train3.append(filename[0])  # labels (1,2,3,4)
-
-# 				else:  # Otherwise we testing on the remaining
-
-# 					X_test3.append(X[Xdir[filename]])  # Features of subjects 3-5
-# 					Y_test3.append(filename[0])
-# 					othertestfeatures.append([sub, sent, samp])
-
-# # feature scaling in order to standardize the features
-# scaler = StandardScaler().fit(X_train3)
-# X_train3 = scaler.transform(X_train3)
-# X_test3 = scaler.transform(X_test3)
-
-# writetopcklfile("Qn3train.pkl", [X_train3, Y_train3])
-# writetopcklfile("Qn3test.pkl", [X_test3, Y_test3, othertestfeatures])
-# # Creating a training file that will contain the training data
-# trainfile = "Question3.dat"
-
-# custom_dump_svmlight_file(X_train3, Y_train3, trainfile)
-
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# #				4.If subject is unseen but sentence is unseen
-# # -------------------------------------------------------------------------------------------------------------------------------------------
-# print("Computing Question 4: subject is unseen but sentence is unseen")
-# totalaccents = 4
-# subsperaccent = ["placeholder", 5, 5, 4, 5]
-# totalsents = 5
-# train_sentence = 4
-# train_subjects = ["placeholder", 4, 4, 3, 4]
-# totalsamples = 10
-
-# # testsubject = np.array(subsperaccent[1:])-np.array(train_subjects[1:])
-# # test_sentence = totalsents - train_sentence  # Don't change
-# # Accent,Subject,Sentence,Sample
-# X_train4 = []
-# X_test4 = []
-# Y_train4 = []
-# Y_test4 = []
-# othertestfeatures = []
-
-# for acc in range(1, totalaccents + 1):
-# 	for sub in range(1, subsperaccent[acc] + 1):
-# 		for sent in range(1, totalsents + 1):
-# 			for samp in range(1, totalsamples + 1):
-
-# 				filename = ",".join([str(it) for it in [acc, sub, sent, samp]])
-
-# 				if sub <= train_subjects[acc] and sent <= train_sentence:
-
-# 					X_train4.append(X[Xdir[filename]])
-# 					# X_train_labels3.append(filename)
-# 					Y_train4.append(filename[0])  # labels (1,2,3)
-
-# 				else:  # Otherwise we testing on the remaining
-
-# 					X_test4.append(X[Xdir[filename]])  # Features of subjects 3-5
-# 					# X_test_labels3.append(filename)  #contains subjects 3-5
-# 					Y_test4.append(filename[0])
-# 					othertestfeatures.append([sub, sent, samp])
-
-# # feature scaling in order to standardize the features
-# scaler = StandardScaler().fit(X_train4)
-# X_train4 = scaler.transform(X_train4)
-# X_test4 = scaler.transform(X_test4)
-
-# writetopcklfile("Qn4train.pkl", [X_train4, Y_train4])
-# writetopcklfile("Qn4test.pkl", [X_test4, Y_test4, othertestfeatures])
-
-# trainfile = "Question4.dat"
-
-# custom_dump_svmlight_file(X_train4, Y_train4, trainfile)
-
-# C = 5
-# gamma = -13
-# clf = SVC(gamma=2**gamma, C=2**C, kernel="rbf")
-# clf.fit(X_train, Y_train)
-
-# # Passing in the test samples against the created model
-# modelPrediction = clf.predict(X_test)
-# print("The model accuracy is:", metrics.accuracy_score(Y_test, modelPrediction) * 100, "%")
-# print("precision scores")
-# print("Macro: ", precision_score(Y_test, modelPrediction, average='macro') * 100, "%")
-# print("recall scores")
-# print("Macro: ", recall_score(Y_test, modelPrediction, average='macro') * 100, "%")
-# print("f1 scores")
-# print("Macro: ", f1_score(Y_test, modelPrediction, average='macro') * 100, "%")
-
-# writetopcklfile("Qn1.model", clf)  # Writing the model to a picklefile
-
-# # Cross validation in order to get the best C and Gamma parameter
-# C = 5
-# gamma = -13
-# clf = SVC(gamma=2 ** gamma, C=2 ** C, kernel="rbf")
-# clf.fit(X_train2, Y_train2)
-
-# # Passing in the test samples against the created model
-# modelPrediction2 = clf.predict(X_test2)
-# print("The model accuracy is:", metrics.accuracy_score(Y_test2, modelPrediction2) * 100, "%")
-# print("precision scores")
-# print("Macro: ", precision_score(Y_test2, modelPrediction2, average='macro') * 100, "%")
-# print("recall scores")
-# print("Macro: ", recall_score(Y_test2, modelPrediction2, average='macro') * 100, "%")
-# print("f1 scores")
-# print("Macro: ", f1_score(Y_test2, modelPrediction2, average='macro') * 100, "%")
-
-# writetopcklfile("Qn2.model", clf)  # Writing the model to a picklefile
-# # Cross validation in order to get the best C and Gamma parameter
-# C = 5
-# gamma = -13
-# clf = SVC(gamma=2 ** gamma, C=2 ** C, kernel="rbf")
-# clf.fit(X_train3, Y_train3)
-# # Passing in the test samples against the created model
-# modelPrediction3 = clf.predict(X_test3)
-# print("The model accuracy is:", metrics.accuracy_score(Y_test3, modelPrediction3) * 100, "%")
-# print("precision scores")
-# print("Macro: ", precision_score(Y_test3, modelPrediction3, average='macro') * 100, "%")
-# print("recall scores")
-# print("Macro: ", recall_score(Y_test3, modelPrediction3, average='macro') * 100, "%")
-# print("f1 scores")
-# print("Macro: ", f1_score(Y_test3, modelPrediction3, average='macro') * 100, "%")
-# writetopcklfile("Qn3.model", clf)
-# # Cross validation in order to get the best C and Gamma parameter
-# C = 5
-# gamma = -13
-# clf = SVC(gamma=2 ** gamma, C=2 ** C, kernel="rbf")
-# clf.fit(X_train4, Y_train4)
-
-# # Passing in the test samples against the created model
-# modelPrediction4 = clf.predict(X_test4)
-
-# print("The model accuracy is:", metrics.accuracy_score(Y_test4, modelPrediction4) * 100, "%")
-# print("precision scores")
-# print("Macro: ", precision_score(Y_test4, modelPrediction4, average='macro') * 100, "%")
-# print("recall scores")
-# print("Macro: ", recall_score(Y_test4, modelPrediction4, average='macro') * 100, "%")
-# print("f1 scores")
-# print("Macro: ", f1_score(Y_test4, modelPrediction4, average='macro') * 100, "%")
-
-# writetopcklfile("Qn4.model", clf)
 
 
 main()
