@@ -1,6 +1,6 @@
 import os
 import numpy as np
-
+from pydub import AudioSegment
 from sklearn.model_selection import train_test_split
 from sklearn import metrics, preprocessing
 from sklearn import svm
@@ -18,12 +18,12 @@ from python_speech_features import mfcc
 from string import ascii_uppercase
 import boto3
 import os
-
+import pdb
 import pickle
 import itertools
 
 
-def pad_audio(data, fs, T=3):
+def pad_audio(data, fs, T=2.89):
     # Calculate target number of samples
     N_tar = int(fs * T)
     # Calculate number of zero samples to append
@@ -42,15 +42,22 @@ def pad_audio(data, fs, T=3):
         return data
 
 
-def normalize(inSig,outLen):
-	#This function normalizes the audio signal.
-	#It first produces an interp1d structure that readily interpolates between points
-	#Then it sets the size of the space to outLen=200000 points, and interp1d interpolates to fill in gaps
-	#In essence, it takes every audio signal and produces a signal with outLen=200000 data points in it = normalization
-    inSig = np.array(inSig)
-    arrInterpol = interpol.interp1d(np.arange(inSig.size),inSig)
-    arrOut = arrInterpol(np.linspace(0,inSig.size-1,outLen))
-    return arrOut
+def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=100):
+    '''
+    sound is a pydub.AudioSegment
+    silence_threshold in dB
+    chunk_size in ms
+
+    iterate over chunks until you find the first one with sound
+    '''
+    trim_ms = 0 # ms
+    
+    assert chunk_size > 0 # to avoid infinite loop
+    while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
+        trim_ms += chunk_size
+
+    return trim_ms
+
 
 
 def load_audio():
@@ -58,7 +65,9 @@ def load_audio():
     letters = {}
     print("Loading audio...")
     file_count = sum(len(files) for _, _, files in os.walk(rootdir))
-    print(file_count)
+
+    length_sum = 0
+    longest = 0
     with tqdm(total=file_count) as pbar:
         for subdir, dirs, files in tqdm(os.walk(rootdir)):
             if (
@@ -71,20 +80,33 @@ def load_audio():
                 for file in files:
                     pbar.update(1)
                     sample_rate, audio = wavfile.read(os.path.join(subdir, file))
-                    newSig = []
-                    for i in range(len(audio)):newSig.append(audio[i])
-                    newSig = normalize(newSig,200000)
-                    data = pad_audio(newSig, sample_rate)
+
+                    # sound = AudioSegment.from_file(os.path.join(subdir, file), format="wav")
+
+                    # start_trim = detect_leading_silence(sound)
+                    # end_trim = detect_leading_silence(sound.reverse())
+
+                    # duration = len(sound)
+                    # trimmed_sound = audio[start_trim - 200 :duration-end_trim + 200]
+                    # print(f"Old duration: {duration} New Duration: {len(trimmed_sound)}")
+
+                    #print(f"{subdir} - {file} {len(trimmed_sound) / float(sample_rate)}")
+                    length_sum += len(audio)
+                    if len(audio) / float(sample_rate) > longest:
+                        longest = len(audio)
+
+                    data = pad_audio(audio, sample_rate)
                     label = os.path.join(subdir, file).split("/")[2]
                     if letters.get(label):
                         letters[label].append(data.ravel())
                     else:
                         letters[label] = [data]
+
     return letters
 
 
 # How to use load_audio() function
-characters = load_audio()
+#characters = load_audio()
 mapping = {v: k for k, v in enumerate(ascii_uppercase)}
 inv_map = {v: k for k, v in mapping.items()}
 
@@ -109,38 +131,9 @@ def extract_features(audio_data):
 
 # Define a function to load the raw audio files
 
-character_features, labels = extract_features(characters)
-
-
-X = character_features
-Y = labels
-
-
-group_1 = ["C", "G", "I", "J", "L", "M", "N", "O", "S", "U", "V", "W", "Z"]
-group_2 = ["A", "B", "D", "K", "P", "Q", "R", "T", "X", "Y"]
-group_3 = ["E", "F", "H"]
-
-X_1, X_2, X_3 = [], [], []
-Y_1, Y_2, Y_3 = [], [], []
-
-for i, label in enumerate(Y):
-    if inv_map[label] in group_1:
-        X_1.append(X[i])
-        Y_1.append(label)
-    if inv_map[label] in group_2:
-        X_2.append(X[i])
-        Y_2.append(label)
-    if inv_map[label] in group_3:
-        X_3.append(X[i])
-        Y_3.append(label)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, Y, test_size=0.3, random_state=30, stratify=Y
-)
-
-scaler = StandardScaler().fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
+#character_features, labels = extract_features(characters)
+X_train, Y_train = pickle.load(open("../Accent-Recognition-2019-master/training_data", "rb"))
+X_test, Y_test = pickle.load(open("../Accent-Recognition-2019-master/semi-seen-data", "rb"))
 
 
 def custom_dump_svmlight_file(X_train, Y_train, filename):
@@ -167,11 +160,11 @@ def custom_dump_svmlight_file(X_train, Y_train, filename):
 
 import joblib
 
-scaler_filename = "scaler.save"
-joblib.dump(scaler, scaler_filename)
+# scaler_filename = "scaler.save"
+# joblib.dump(scaler, scaler_filename)
 
-custom_dump_svmlight_file(X_train, y_train, "training_data")
-custom_dump_svmlight_file(X_test, y_test, "test_data")
+# custom_dump_svmlight_file(X_train, y_train, "training_data")
+# custom_dump_svmlight_file(X_test, y_test, "test_data")
 
 
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -183,7 +176,7 @@ def training(training_data, test_data, file_output_name, params):
     X_train, Y_train = training_data
     X_test, Y_test = test_data
 
-    clf = svm.SVC(kernel="rbf", C=params["C"], gamma=params["gamma"])
+    clf = svm.SVC(kernel="rbf", C=128.0, gamma=0.0001220703125)
     clf.fit(X_train, Y_train)
     pred = clf.predict(X_test)
     print(clf.score(X_test, Y_test))
@@ -198,11 +191,11 @@ def training(training_data, test_data, file_output_name, params):
 
 
 # all_params = grid(X_train, y_train)
-all_params = {"C": 32.0, "gamma": 0.0001220703125}
+all_params = {"C": 3, "gamma": -11}
 
 
 all_matrix = training(
-    (X_train, y_train), (X_test, y_test), "classifier_all.pkl", all_params
+    (X_train, Y_train), (X_test, Y_test), "classifier_all.pkl", all_params
 )
 
 

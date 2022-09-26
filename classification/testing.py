@@ -81,7 +81,7 @@ mapping = {float(k): v for k, v in enumerate(ascii_uppercase)}
 #     for k1, v1 in v.items():
 #         print(f"{k1} - {v1.count(k1) / len(v1)}")
 
-def pad_audio(data, fs, T=3):
+def pad_audio(data, fs, T=2.89):
     # Calculate target number of samples
     N_tar = int(fs * T)
     # Calculate number of zero samples to append
@@ -106,22 +106,34 @@ def load_audio():
     print("Loading audio...")
     file_count = sum(len(files) for _, _, files in os.walk(rootdir))
     print(file_count)
+    length_sum = 0
+    longest = 0
     with tqdm(total=file_count) as pbar:
         for subdir, dirs, files in tqdm(os.walk(rootdir)):
-            if '6' in subdir or '7' in subdir or '8' in subdir:
+            if (
+                "8" in subdir
+                
+
+            ):
                 for file in files:
                     pbar.update(1)
                     sample_rate, audio = wavfile.read(os.path.join(subdir, file))
+                    length_sum += len(audio) / float(sample_rate)
+                    if len(audio) / float(sample_rate) > longest:
+                        longest = len(audio) / float(sample_rate)
 
                     data = pad_audio(audio, sample_rate)
                     label = os.path.join(subdir, file).split("/")[2]
                     if letters.get(label):
-                        letters[label].append(data)
+                        letters[label].append(data.ravel())
                     else:
                         letters[label] = [data]
+    print(f"longest sample - {longest}")
+    print(f"average {length_sum/780}")
     return letters
 
-characters = load_audio()
+
+#characters = load_audio()
 mapping = {v: k for k, v in enumerate(ascii_uppercase)}
 inv_map = {v: k for k, v in mapping.items()}
 
@@ -146,14 +158,10 @@ def extract_features(audio_data):
 model = pickle.load(open("classifier_all.pkl", "rb"))
 # Define a function to load the raw audio files
 
-character_features, labels = extract_features(characters)
+#character_features, labels = extract_features(characters)
+X_test, Y = pickle.load(open("../Accent-Recognition-2019-master/unseen-data", "rb"))
+#Y = labels
 
-X = character_features
-Y = labels
-scaler_filename = "scaler.save"
-scaler = joblib.load(scaler_filename)
-
-X_test = scaler.transform(X)
 y_pred = model.predict(X_test)
 print(y_pred)
 from sklearn.metrics import confusion_matrix, accuracy_score
