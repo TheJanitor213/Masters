@@ -167,8 +167,8 @@ def training(training_data, test_data, file_output_name, params):
         pickle.dump(clf, fid)
 
     return confusion_matrix(Y_test, pred)
-
-
+mapping = {v: k for k, v in enumerate(ascii_uppercase)}
+inv_map = {v: k for k, v in mapping.items()}
 def main():
     start = time()
 
@@ -194,8 +194,8 @@ def main():
     counter = 0
     unseen_counter = 0
     file_count = sum(len(files) for _, _, files in os.walk(path))
-    mapping = {v: k for k, v in enumerate(ascii_uppercase)}
-    inv_map = {v: k for k, v in mapping.items()}
+
+
     subjects = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
     choices = ["1", "2", "3", "4", "5"]
     print(choices)
@@ -276,10 +276,9 @@ def main():
     custom_dump_svmlight_file(X_test, y_test, "semi-seen-data")
     # custom_dump_svmlight_file(X_unseen, y_unseen, "unseen-data")
 
-    scaler = StandardScaler().fit(X_unseen)
     X_unseen = scaler.transform(X_unseen)
 
-    # writetopcklfile("unseen-data", [X_unseen, y_unseen])
+    writetopcklfile("unseen-data", [X_unseen, y_unseen])
 
     # c, gamma, accuracy = paramsfromexternalgridsearch(
     #     "new_training_data",
@@ -332,37 +331,61 @@ def main():
         "LAZY",
         "DOG",
     ]
-    subject_1, subject_2, subject_3 = [], [], []
+    subject_1, subject_2, subject_3 = {}, {}, {}
     for w in test_words:
         word_1, word_2, word_3 = [], [], []
         for l in w:
             value = mapping[l]
-            word_1.append(X_unseen[((value+1)*8)-1])
-            word_2.append(X_unseen[((value+1)*8 + 208)-1])
-            word_3.append(X_unseen[((value+1)*8 + 416)-1])
-        subject_1.append(word_1)
-        subject_2.append(word_2)
-        subject_3.append(word_3)
-    
+            word_1.append(X_unseen[((value + 1) * 8) - 1])
+            word_2.append(X_unseen[((value + 1) * 8 + 208) - 1])
+            word_3.append(X_unseen[((value + 1) * 8 + 416) - 1])
+        subject_1[w] = "".join([inv_map[j] for j in list(model.predict(word_1))])
+        subject_2[w] = "".join([inv_map[j] for j in list(model.predict(word_2))])
+        subject_3[w] = "".join([inv_map[j] for j in list(model.predict(word_3))])
+
+    check_words(subject_1)
+    check_words(subject_2)
+    check_words(subject_3)
+    # for i in subject_1:
+    #     prediction = 
+    #     print("".join([inv_map[j] for j in list(prediction)]))
+    #     # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+    #     print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
+    # for i in subject_2:
+    #     prediction = model.predict(np.array(i))
+    #     print("".join([inv_map[j] for j in list(prediction)]))
+    #     # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+    #     print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
+    # for i in subject_3:
+    #     prediction = model.predict(np.array(i))
+    #     print("".join([inv_map[j] for j in list(prediction)]))
+    #     # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
+    #     print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
+
+
+def check_words(subject):
     from spellchecker import SpellChecker
+
     spell = SpellChecker()
-    for i in subject_1:
-        prediction = model.predict(np.array(i))
-        print("".join([inv_map[j] for j in list(prediction)]))
-        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
-    for i in subject_2:
-        prediction = model.predict(np.array(i))
-        print("".join([inv_map[j] for j in list(prediction)]))
-        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
-    for i in subject_3:
-        prediction = model.predict(np.array(i))
-        print("".join([inv_map[j] for j in list(prediction)]))
-        # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
-        print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
+    
+    for correct, prediction in subject.items():
+        print(f"{correct} - {prediction}")
+        before = 0
 
-
-
-
+        for i, l in enumerate(prediction):
+            if l == correct[i]:
+                before += 1
+        candidates = spell.candidates(prediction)
+        after = 0
+        if candidates:
+            for word in candidates:
+                if len(word) == len(prediction):
+                    #print(f"Changing {prediction} to {word.upper()}")
+                    prediction = word.upper()
+                    break
+             
+            for i, l in enumerate(prediction):
+                if l == correct[i]:
+                    after += 1
+        print(f"{len(correct)} - {before} - {after} - {candidates}")
 main()
