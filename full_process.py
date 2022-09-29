@@ -167,8 +167,12 @@ def training(training_data, test_data, file_output_name, params):
         pickle.dump(clf, fid)
 
     return confusion_matrix(Y_test, pred)
+
+
 mapping = {v: k for k, v in enumerate(ascii_uppercase)}
 inv_map = {v: k for k, v in mapping.items()}
+
+
 def main():
     start = time()
 
@@ -190,18 +194,18 @@ def main():
     # The upper bound for the data set samples is 2.89 seconds so later just pad every sequence with
     # zeros up to this length
     rate = 44100
-    maxlength = rate * 2.89
+    maxlength = rate * 2.82
     counter = 0
     unseen_counter = 0
     file_count = sum(len(files) for _, _, files in os.walk(path))
 
-
-    subjects = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
-    choices = ["1", "2", "3", "4", "5"]
+    choices = ["Subject_1", "Subject_2", "Subject_3", "Subject_4", "Subject_5"]
     print(choices)
+    max_length = 0
     with tqdm(total=file_count) as pbar:
         for subdir, dirs, files in tqdm(os.walk("data_by_subject/")):
             file_counter = 0
+            print(subdir, len(files))
             for soundfile in files:
                 if file_counter == 0 or file_counter == 9:
                     file_counter += 1
@@ -209,6 +213,8 @@ def main():
                 pbar.update(1)
                 if soundfile.endswith(".wav"):
                     (rate, sig) = wav.read(subdir + "/" + soundfile)
+                    if len(sig) / float(rate) > max_length:
+                        max_length = len(sig) / float(rate)
                     newSig = np.array(sig)
                     if rate != 44100:
 
@@ -251,6 +257,7 @@ def main():
                         y.append(label)
                         counter += 1
                     else:
+                        # print(os.path.join(subdir, soundfile))
                         if unseen_counter == 0:
                             X_unseen = mfcc_feat
                         else:
@@ -259,7 +266,7 @@ def main():
                         y_unseen.append(label)
                         unseen_counter += 1
                 file_counter += 1
-    # print("maxlength = ", maxlength)
+    print("maxlength = ", max_length)
     # y.append(soundfile[:1])
     finish = time()
     print("Time to load data %.3f s" % (finish - start))
@@ -275,36 +282,36 @@ def main():
     custom_dump_svmlight_file(X_train, y_train, "new_training_data")
     custom_dump_svmlight_file(X_test, y_test, "semi-seen-data")
     # custom_dump_svmlight_file(X_unseen, y_unseen, "unseen-data")
-
+    
+    
+    scaler = StandardScaler().fit(X_unseen)
     X_unseen = scaler.transform(X_unseen)
 
-    writetopcklfile("unseen-data", [X_unseen, y_unseen])
+    c, gamma, accuracy = paramsfromexternalgridsearch(
+        "new_training_data",
+        crange,
+        grange,
+        printlines=True,
+    )
+    print(accuracy)
 
-    # c, gamma, accuracy = paramsfromexternalgridsearch(
-    #     "new_training_data",
-    #     crange,
-    #     grange,
-    #     printlines=True,
-    # )
-    # print(accuracy)
+    all_matrix = training(
+        (X_train, y_train),
+        (X_test, y_test),
+        "classifier_all.pkl",
+        {"C": c, "gamma": gamma},
+    )
 
-    # all_matrix = training(
-    #     (X_train, y_train),
-    #     (X_test, y_test),
-    #     "classifier_all.pkl",
-    #     {"C": c, "gamma": gamma},
-    # )
+    df_cm = pd.DataFrame(
+        all_matrix,
+        index=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+        columns=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+    )
+    plt.figure(figsize=(10, 7))
+    all_map = sns.heatmap(df_cm, annot=True)
 
-    # df_cm = pd.DataFrame(
-    #     all_matrix,
-    #     index=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
-    #     columns=[i for i in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
-    # )
-    # plt.figure(figsize=(10, 7))
-    # all_map = sns.heatmap(df_cm, annot=True)
-
-    # fig = all_map.get_figure()
-    # fig.savefig("semi-seen.png")
+    fig = all_map.get_figure()
+    fig.savefig("semi-seen.png")
 
     model = pickle.load(open("classifier_all.pkl", "rb"))
     y_pred = model.predict(X_unseen)
@@ -343,11 +350,11 @@ def main():
         subject_2[w] = "".join([inv_map[j] for j in list(model.predict(word_2))])
         subject_3[w] = "".join([inv_map[j] for j in list(model.predict(word_3))])
 
-    check_words(subject_1)
-    check_words(subject_2)
-    check_words(subject_3)
+    # check_words(subject_1)
+    # check_words(subject_2)
+    # check_words(subject_3)
     # for i in subject_1:
-    #     prediction = 
+    #     prediction =
     #     print("".join([inv_map[j] for j in list(prediction)]))
     #     # print(spell.correction("".join([inv_map[j] for j in list(model.predict(np.array(i)))])))
     #     print(spell.candidates("".join([inv_map[j] for j in list(prediction)])))
@@ -367,7 +374,7 @@ def check_words(subject):
     from spellchecker import SpellChecker
 
     spell = SpellChecker()
-    
+
     for correct, prediction in subject.items():
         print(f"{correct} - {prediction}")
         before = 0
@@ -380,12 +387,14 @@ def check_words(subject):
         if candidates:
             for word in candidates:
                 if len(word) == len(prediction):
-                    #print(f"Changing {prediction} to {word.upper()}")
+                    # print(f"Changing {prediction} to {word.upper()}")
                     prediction = word.upper()
                     break
-             
+
             for i, l in enumerate(prediction):
                 if l == correct[i]:
                     after += 1
         print(f"{len(correct)} - {before} - {after} - {candidates}")
+
+
 main()
